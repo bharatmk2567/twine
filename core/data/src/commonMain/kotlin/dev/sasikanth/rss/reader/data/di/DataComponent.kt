@@ -43,6 +43,7 @@ import dev.sasikanth.rss.reader.data.sync.dropbox.DropboxCloudServiceProvider
 import dev.sasikanth.rss.reader.data.sync.freshrss.FreshRssSyncProvider
 import dev.sasikanth.rss.reader.data.sync.google.GoogleDriveCloudServiceProvider
 import dev.sasikanth.rss.reader.data.sync.miniflux.MinifluxSyncProvider
+import dev.sasikanth.rss.reader.data.sync.nextcloud.NextcloudSyncProvider
 import dev.sasikanth.rss.reader.di.scopes.AppScope
 import io.ktor.client.HttpClient
 import me.tatarka.inject.annotations.Provides
@@ -172,11 +173,13 @@ interface DataComponent :
     googleDriveSyncProvider: GoogleDriveCloudServiceProvider,
     freshRssSyncProvider: FreshRssSyncProvider,
     minifluxSyncProvider: MinifluxSyncProvider,
+    nextcloudSyncProvider: NextcloudSyncProvider,
     appInfo: AppInfo,
   ): Set<CloudServiceProvider> {
     return buildSet {
       add(minifluxSyncProvider)
       add(freshRssSyncProvider)
+      add(nextcloudSyncProvider)
       add(cloudServiceProvider)
       if (!appInfo.isFoss) {
         add(googleDriveSyncProvider)

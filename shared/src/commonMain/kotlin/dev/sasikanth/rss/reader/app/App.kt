@@ -73,6 +73,7 @@ import dev.sasikanth.rss.reader.groupselection.GroupSelectionViewModel
 import dev.sasikanth.rss.reader.home.HomeViewModel
 import dev.sasikanth.rss.reader.media.AudioPlayer
 import dev.sasikanth.rss.reader.miniflux.MinifluxLoginViewModel
+import dev.sasikanth.rss.reader.nextcloud.NextcloudLoginViewModel
 import dev.sasikanth.rss.reader.onboarding.OnboardingViewModel
 import dev.sasikanth.rss.reader.placeholder.PlaceholderViewModel
 import dev.sasikanth.rss.reader.platform.LinkHandler
@@ -150,6 +151,7 @@ fun App(
   accountSelectionViewModel: () -> AccountSelectionViewModel,
   freshRssLoginViewModel: () -> FreshRssLoginViewModel,
   minifluxLoginViewModel: () -> MinifluxLoginViewModel,
+  nextcloudLoginViewModel: () -> NextcloudLoginViewModel,
   groupViewModel: (SavedStateHandle) -> GroupViewModel,
   blockedWordsViewModel: () -> BlockedWordsViewModel,
   statisticsViewModel: () -> StatisticsViewModel,
@@ -359,6 +361,12 @@ fun App(
           minifluxLoginScreen(
             modifier = screenModifier,
             minifluxLoginViewModel = minifluxLoginViewModel,
+            navigator = navigator,
+          )
+
+          nextcloudLoginScreen(
+            modifier = screenModifier,
+            nextcloudLoginViewModel = nextcloudLoginViewModel,
             navigator = navigator,
           )
 

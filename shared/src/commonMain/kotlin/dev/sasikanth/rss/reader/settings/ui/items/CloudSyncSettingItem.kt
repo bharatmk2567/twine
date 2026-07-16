@@ -56,6 +56,7 @@ import dev.sasikanth.rss.reader.resources.icons.Dropbox
 import dev.sasikanth.rss.reader.resources.icons.Freshrss
 import dev.sasikanth.rss.reader.resources.icons.GoogleDrive
 import dev.sasikanth.rss.reader.resources.icons.Miniflux
+import dev.sasikanth.rss.reader.resources.icons.Nextcloud
 import dev.sasikanth.rss.reader.resources.icons.StarShine
 import dev.sasikanth.rss.reader.resources.icons.Sync
 import dev.sasikanth.rss.reader.resources.icons.TwineIcons
@@ -71,6 +72,7 @@ import twine.shared.generated.resources.settingsSyncDropbox
 import twine.shared.generated.resources.settingsSyncFreshRSS
 import twine.shared.generated.resources.settingsSyncGoogleDrive
 import twine.shared.generated.resources.settingsSyncMiniflux
+import twine.shared.generated.resources.settingsSyncNextcloud
 import twine.shared.generated.resources.settingsSyncSignIn
 import twine.shared.generated.resources.settingsSyncSignOut
 import twine.shared.generated.resources.settingsSyncStatusFailure
@@ -96,6 +98,7 @@ internal fun CloudSyncSettingItem(
         ServiceType.FRESH_RSS -> stringResource(Res.string.settingsSyncFreshRSS)
         ServiceType.MINIFLUX -> stringResource(Res.string.settingsSyncMiniflux)
         ServiceType.GOOGLE_DRIVE -> stringResource(Res.string.settingsSyncGoogleDrive)
+        ServiceType.NEXTCLOUD -> stringResource(Res.string.settingsSyncNextcloud)
       }
     val isSignedIn by provider.isSignedIn().collectAsStateWithLifecycle(false)
     val verticalPadding by animateDpAsState(if (isSignedIn) 16.dp else 12.dp)
@@ -122,6 +125,7 @@ internal fun CloudSyncSettingItem(
             ServiceType.MINIFLUX -> TwineIcons.Miniflux
             ServiceType.DROPBOX -> TwineIcons.Dropbox
             ServiceType.GOOGLE_DRIVE -> TwineIcons.GoogleDrive
+            ServiceType.NEXTCLOUD -> TwineIcons.Nextcloud
           }
 
         Box(modifier = Modifier.size(40.dp), contentAlignment = Alignment.Center) {

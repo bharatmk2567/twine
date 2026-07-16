@@ -106,6 +106,7 @@ class AccountSelectionViewModel(
         when (provider.cloudService) {
           ServiceType.FRESH_RSS -> _effects.emit(AccountSelectionEffect.OpenFreshRssLogin)
           ServiceType.MINIFLUX -> _effects.emit(AccountSelectionEffect.OpenMinifluxLogin)
+          ServiceType.NEXTCLOUD -> _effects.emit(AccountSelectionEffect.OpenNextcloudLogin)
           else -> {
             throw IllegalStateException("Unknown cloud service type: ${provider.cloudService}")
           }

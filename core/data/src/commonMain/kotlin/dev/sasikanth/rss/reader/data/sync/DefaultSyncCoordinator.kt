@@ -25,6 +25,8 @@ import dev.sasikanth.rss.reader.data.sync.google.GoogleDriveSyncCoordinator
 import dev.sasikanth.rss.reader.data.sync.local.LocalSyncCoordinator
 import dev.sasikanth.rss.reader.data.sync.miniflux.MinifluxSyncCoordinator
 import dev.sasikanth.rss.reader.data.sync.miniflux.MinifluxSyncProvider
+import dev.sasikanth.rss.reader.data.sync.nextcloud.NextcloudSyncCoordinator
+import dev.sasikanth.rss.reader.data.sync.nextcloud.NextcloudSyncProvider
 import dev.sasikanth.rss.reader.di.scopes.AppScope
 import dev.sasikanth.rss.reader.util.DispatchersProvider
 import kotlinx.coroutines.CoroutineScope
@@ -50,6 +52,8 @@ class DefaultSyncCoordinator(
   private val freshRssSyncProvider: FreshRssSyncProvider,
   private val minifluxSyncCoordinator: MinifluxSyncCoordinator,
   private val minifluxSyncProvider: MinifluxSyncProvider,
+  private val nextcloudSyncCoordinator: NextcloudSyncCoordinator,
+  private val nextcloudSyncProvider: NextcloudSyncProvider,
   dispatchersProvider: DispatchersProvider,
 ) : SyncCoordinator {
 
@@ -62,10 +66,17 @@ class DefaultSyncCoordinator(
         googleDriveSyncProvider.isSignedIn(),
         freshRssSyncProvider.isSignedIn(),
         minifluxSyncProvider.isSignedIn(),
-      ) { dropboxSignedIn, googleDriveSignedIn, freshRssSignedIn, minifluxSignedIn ->
+        nextcloudSyncProvider.isSignedIn(),
+      ) {
+        dropboxSignedIn,
+        googleDriveSignedIn,
+        freshRssSignedIn,
+        minifluxSignedIn,
+        nextcloudSignedIn ->
         when {
           freshRssSignedIn -> freshRSSSyncCoordinator
           minifluxSignedIn -> minifluxSyncCoordinator
+          nextcloudSignedIn -> nextcloudSyncCoordinator
           dropboxSignedIn -> dropboxSyncCoordinator
           googleDriveSignedIn -> googleDriveSyncCoordinator
           else -> localSyncCoordinator
@@ -78,6 +89,7 @@ class DefaultSyncCoordinator(
     return when {
       freshRssSyncProvider.isSignedInImmediate() -> freshRSSSyncCoordinator.pull()
       minifluxSyncProvider.isSignedInImmediate() -> minifluxSyncCoordinator.pull()
+      nextcloudSyncProvider.isSignedInImmediate() -> nextcloudSyncCoordinator.pull()
       dropboxSyncProvider.isSignedInImmediate() -> dropboxSyncCoordinator.pull()
       googleDriveSyncProvider.isSignedInImmediate() -> googleDriveSyncCoordinator.pull()
       else -> localSyncCoordinator.pull()
@@ -92,6 +104,7 @@ class DefaultSyncCoordinator(
     return when {
       freshRssSyncProvider.isSignedInImmediate() -> freshRSSSyncCoordinator.pull(feedIds)
       minifluxSyncProvider.isSignedInImmediate() -> minifluxSyncCoordinator.pull(feedIds)
+      nextcloudSyncProvider.isSignedInImmediate() -> nextcloudSyncCoordinator.pull(feedIds)
       dropboxSyncProvider.isSignedInImmediate() -> dropboxSyncCoordinator.pull(feedIds)
       googleDriveSyncProvider.isSignedInImmediate() -> googleDriveSyncCoordinator.pull(feedIds)
       else -> localSyncCoordinator.pull(feedIds)
@@ -106,6 +119,7 @@ class DefaultSyncCoordinator(
     return when {
       freshRssSyncProvider.isSignedInImmediate() -> freshRSSSyncCoordinator.pull(feedId)
       minifluxSyncProvider.isSignedInImmediate() -> minifluxSyncCoordinator.pull(feedId)
+      nextcloudSyncProvider.isSignedInImmediate() -> nextcloudSyncCoordinator.pull(feedId)
       dropboxSyncProvider.isSignedInImmediate() -> dropboxSyncCoordinator.pull(feedId)
       googleDriveSyncProvider.isSignedInImmediate() -> googleDriveSyncCoordinator.pull(feedId)
       else -> localSyncCoordinator.pull(feedId)
@@ -120,6 +134,7 @@ class DefaultSyncCoordinator(
     return when {
       freshRssSyncProvider.isSignedInImmediate() -> freshRSSSyncCoordinator.push()
       minifluxSyncProvider.isSignedInImmediate() -> minifluxSyncCoordinator.push()
+      nextcloudSyncProvider.isSignedInImmediate() -> nextcloudSyncCoordinator.push()
       dropboxSyncProvider.isSignedInImmediate() -> dropboxSyncCoordinator.push()
       googleDriveSyncProvider.isSignedInImmediate() -> googleDriveSyncCoordinator.push()
       else -> localSyncCoordinator.push()

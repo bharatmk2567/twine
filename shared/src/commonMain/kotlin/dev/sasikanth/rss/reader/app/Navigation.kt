@@ -73,6 +73,9 @@ import dev.sasikanth.rss.reader.main.ui.MainScreen
 import dev.sasikanth.rss.reader.miniflux.MinifluxLoginViewModel
 import dev.sasikanth.rss.reader.miniflux.ui.MINIFLUX_LOGIN_SUCCESS_KEY
 import dev.sasikanth.rss.reader.miniflux.ui.MinifluxLoginScreen
+import dev.sasikanth.rss.reader.nextcloud.NextcloudLoginViewModel
+import dev.sasikanth.rss.reader.nextcloud.ui.NEXTCLOUD_LOGIN_SUCCESS_KEY
+import dev.sasikanth.rss.reader.nextcloud.ui.NextcloudLoginScreen
 import dev.sasikanth.rss.reader.onboarding.OnboardingViewModel
 import dev.sasikanth.rss.reader.onboarding.ui.OnboardingScreen
 import dev.sasikanth.rss.reader.placeholder.PlaceholderScreen
@@ -160,6 +163,7 @@ fun EntryProviderScope<NavKey>.accountSelectionScreen(
       openPaywall = { navigator.navigate(Screen.Paywall()) },
       openFreshRssLogin = { navigator.navigate(Screen.FreshRssLogin) },
       openMinifluxLogin = { navigator.navigate(Screen.MinifluxLogin) },
+      openNextcloudLogin = { navigator.navigate(Screen.NextcloudLogin) },
       goBack = { navigator.goBack() },
     )
   }
@@ -298,6 +302,17 @@ fun EntryProviderScope<NavKey>.mainScreen(
               }
               .launchIn(this)
           }
+          LaunchedEffect(Unit) {
+            navigator.results
+              .map { it[NEXTCLOUD_LOGIN_SUCCESS_KEY] as? Boolean }
+              .filterNotNull()
+              .filter { it }
+              .onEach {
+                viewModel.dispatch(SettingsEvent.TriggerSync)
+                navigator.consumeResult(NEXTCLOUD_LOGIN_SUCCESS_KEY)
+              }
+              .launchIn(this)
+          }
 
           SettingsScreen(
             viewModel = viewModel,
@@ -394,6 +409,7 @@ fun EntryProviderScope<NavKey>.settingsServicesScreen(
       openPaywall = { navigator.navigate(Screen.Paywall()) },
       openFreshRssLogin = { navigator.navigate(Screen.FreshRssLogin) },
       openMinifluxLogin = { navigator.navigate(Screen.MinifluxLogin) },
+      openNextcloudLogin = { navigator.navigate(Screen.NextcloudLogin) },
     )
   }
 }
@@ -474,6 +490,25 @@ fun EntryProviderScope<NavKey>.minifluxLoginScreen(
       viewModel = viewModel,
       onLoginSuccess = {
         navigator.setResult(MINIFLUX_LOGIN_SUCCESS_KEY, true)
+        navigator.goBack()
+      },
+      goBack = { navigator.goBack() },
+    )
+  }
+}
+
+fun EntryProviderScope<NavKey>.nextcloudLoginScreen(
+  nextcloudLoginViewModel: () -> NextcloudLoginViewModel,
+  navigator: AppNavigator,
+  modifier: Modifier = Modifier,
+) {
+  entry<Screen.NextcloudLogin> {
+    val viewModel = viewModel { nextcloudLoginViewModel() }
+    NextcloudLoginScreen(
+      modifier = modifier,
+      viewModel = viewModel,
+      onLoginSuccess = {
+        navigator.setResult(NEXTCLOUD_LOGIN_SUCCESS_KEY, true)
         navigator.goBack()
       },
       goBack = { navigator.goBack() },

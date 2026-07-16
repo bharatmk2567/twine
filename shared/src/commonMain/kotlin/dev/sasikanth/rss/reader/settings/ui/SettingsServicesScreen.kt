@@ -78,6 +78,7 @@ import twine.shared.generated.resources.settingsSyncDropbox
 import twine.shared.generated.resources.settingsSyncFreshRSS
 import twine.shared.generated.resources.settingsSyncGoogleDrive
 import twine.shared.generated.resources.settingsSyncMiniflux
+import twine.shared.generated.resources.settingsSyncNextcloud
 import twine.shared.generated.resources.settingsSyncStatusFailure
 import twine.shared.generated.resources.switchServiceDescription
 import twine.shared.generated.resources.switchServiceTitle
@@ -89,6 +90,7 @@ internal fun SettingsServicesScreen(
   openPaywall: () -> Unit,
   openFreshRssLogin: () -> Unit,
   openMinifluxLogin: () -> Unit,
+  openNextcloudLogin: () -> Unit,
   modifier: Modifier = Modifier,
 ) {
   val state by viewModel.state.collectAsStateWithLifecycle()
@@ -120,6 +122,7 @@ internal fun SettingsServicesScreen(
     openPaywall = openPaywall,
     openFreshRssLogin = openFreshRssLogin,
     openMinifluxLogin = openMinifluxLogin,
+    openNextcloudLogin = openNextcloudLogin,
     modifier = modifier,
   )
 }
@@ -133,6 +136,7 @@ private fun SettingsServicesContent(
   openPaywall: () -> Unit,
   openFreshRssLogin: () -> Unit,
   openMinifluxLogin: () -> Unit,
+  openNextcloudLogin: () -> Unit,
   modifier: Modifier = Modifier,
 ) {
   val layoutDirection = LocalLayoutDirection.current
@@ -168,6 +172,7 @@ private fun SettingsServicesContent(
             when (toProvider.cloudService) {
               ServiceType.FRESH_RSS -> openFreshRssLogin()
               ServiceType.MINIFLUX -> openMinifluxLogin()
+              ServiceType.NEXTCLOUD -> openNextcloudLogin()
               else -> {
                 // Unknown service type
               }
@@ -243,6 +248,7 @@ private fun SettingsServicesContent(
                   when (provider.cloudService) {
                     ServiceType.FRESH_RSS -> openFreshRssLogin()
                     ServiceType.MINIFLUX -> openMinifluxLogin()
+                    ServiceType.NEXTCLOUD -> openNextcloudLogin()
                     else -> {
                       throw IllegalStateException(
                         "Unknown cloud service type: ${provider.cloudService}"
@@ -340,6 +346,7 @@ private fun serviceName(serviceType: ServiceType?): String {
     ServiceType.FRESH_RSS -> stringResource(Res.string.settingsSyncFreshRSS)
     ServiceType.MINIFLUX -> stringResource(Res.string.settingsSyncMiniflux)
     ServiceType.GOOGLE_DRIVE -> stringResource(Res.string.settingsSyncGoogleDrive)
+    ServiceType.NEXTCLOUD -> stringResource(Res.string.settingsSyncNextcloud)
     null -> ""
   }
 }
@@ -367,6 +374,7 @@ private fun SettingsServicesPreview() {
       openPaywall = {},
       openFreshRssLogin = {},
       openMinifluxLogin = {},
+      openNextcloudLogin = {},
     )
   }
 }

@@ -62,6 +62,7 @@ import dev.sasikanth.rss.reader.resources.icons.Freshrss
 import dev.sasikanth.rss.reader.resources.icons.GoogleDrive
 import dev.sasikanth.rss.reader.resources.icons.Home
 import dev.sasikanth.rss.reader.resources.icons.Miniflux
+import dev.sasikanth.rss.reader.resources.icons.Nextcloud
 import dev.sasikanth.rss.reader.resources.icons.StarShine
 import dev.sasikanth.rss.reader.resources.icons.TwineIcons
 import dev.sasikanth.rss.reader.ui.AppTheme
@@ -77,6 +78,7 @@ import twine.shared.generated.resources.settingsSyncDropbox
 import twine.shared.generated.resources.settingsSyncFreshRSS
 import twine.shared.generated.resources.settingsSyncGoogleDrive
 import twine.shared.generated.resources.settingsSyncMiniflux
+import twine.shared.generated.resources.settingsSyncNextcloud
 
 @Composable
 internal fun AccountSelectionScreen(
@@ -86,6 +88,7 @@ internal fun AccountSelectionScreen(
   openPaywall: () -> Unit,
   openFreshRssLogin: () -> Unit,
   openMinifluxLogin: () -> Unit,
+  openNextcloudLogin: () -> Unit,
   goBack: () -> Unit,
   modifier: Modifier = Modifier,
 ) {
@@ -103,6 +106,7 @@ internal fun AccountSelectionScreen(
         AccountSelectionEffect.OpenPaywall -> openPaywall()
         AccountSelectionEffect.OpenFreshRssLogin -> openFreshRssLogin()
         AccountSelectionEffect.OpenMinifluxLogin -> openMinifluxLogin()
+        AccountSelectionEffect.OpenNextcloudLogin -> openNextcloudLogin()
       }
     }
   }
@@ -195,6 +199,7 @@ private fun AccountSelectionContent(
             ServiceType.FRESH_RSS -> stringResource(Res.string.settingsSyncFreshRSS)
             ServiceType.MINIFLUX -> stringResource(Res.string.settingsSyncMiniflux)
             ServiceType.GOOGLE_DRIVE -> stringResource(Res.string.settingsSyncGoogleDrive)
+            ServiceType.NEXTCLOUD -> stringResource(Res.string.settingsSyncNextcloud)
           }
 
         val icon =
@@ -203,6 +208,7 @@ private fun AccountSelectionContent(
             ServiceType.FRESH_RSS -> TwineIcons.Freshrss
             ServiceType.MINIFLUX -> TwineIcons.Miniflux
             ServiceType.GOOGLE_DRIVE -> TwineIcons.GoogleDrive
+            ServiceType.NEXTCLOUD -> TwineIcons.Nextcloud
           }
 
         AccountItem(
