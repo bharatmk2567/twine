@@ -23,7 +23,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -66,6 +65,7 @@ import dev.sasikanth.rss.reader.resources.icons.Nextcloud
 import dev.sasikanth.rss.reader.resources.icons.StarShine
 import dev.sasikanth.rss.reader.resources.icons.TwineIcons
 import dev.sasikanth.rss.reader.ui.AppTheme
+import dev.sasikanth.rss.reader.utils.restrictContentWidth
 import org.jetbrains.compose.resources.stringResource
 import twine.shared.generated.resources.Res
 import twine.shared.generated.resources.accountSelectionCloudSync
@@ -172,7 +172,7 @@ private fun AccountSelectionContent(
       }
     },
   ) { padding ->
-    LazyColumn(modifier = Modifier.fillMaxSize().padding(padding)) {
+    LazyColumn(modifier = Modifier.restrictContentWidth().padding(padding)) {
       item { SubHeader(text = stringResource(Res.string.accountSelectionLocal)) }
 
       item {

@@ -103,6 +103,8 @@
   <string name="settingsPostsDeletionPeriodNever">Never</string>
   <string name="settingsShowReaderViewTitle">Enable reader view</string>
   <string name="settingsShowReaderViewSubtitle">Articles will be displayed in a simplified format</string>
+  <string name="settingsConfirmMarkAllAsReadTitle">Confirm mark all as read</string>
+  <string name="settingsConfirmMarkAllAsReadSubtitle">Ask for confirmation before marking all articles as read</string>
   <string name="settingsThemeAuto">Auto</string>
   <string name="settingsThemeLight">Light</string>
   <string name="settingsThemeDark">Dark</string>
@@ -235,6 +237,7 @@
   <string name="themeVariantCoral" translatable="false">Coral</string>
   <string name="themeVariantRaspberry" translatable="false">Raspberry</string>
   <string name="themeVariantSkyline" translatable="false">Skyline</string>
+  <string name="themeVariantLavender" translatable="false">Lavender</string>
   <string name="postsFilter">Posts filter</string>
   <string name="postsSortBy">Sort by</string>
   <string name="postsSortByPostDate">Post date</string>
@@ -251,7 +254,8 @@
   <string name="settingsDownloadFullContentSubtitle">When enabled, the app will try and download full articles during sync</string>
   <string name="settingsDownloadFullContentWarning">Warning!: This can increase feed loading times, data usage, memory and storage consumption. It can potentially impact your user experience</string>
   <string name="sort">Sort</string>
-  <string name="settingsHeaderSync">Services (Alpha)</string>
+  <string name="settingsHeaderCloudStorage">Cloud storage</string>
+  <string name="settingsHeaderFeedServices">Feed services</string>
   <string name="settingsSyncDropbox" translatable="false">Dropbox</string>
   <string name="settingsSyncFreshRSS" translatable="false">FreshRSS (GReader)</string>
   <string name="settingsSyncDropboxDesc">Consistent cross-platform sync</string>
@@ -444,4 +448,18 @@
   <string name="premiumPaywallBilledAnnually">Billed annually</string>
   <string name="premiumPaywallPayOnce">Pay once</string>
   <string name="premiumPaywallCancelAnytime">Cancel anytime. No commitment.</string>
+  <string name="keyboardShortcutsTitle">Keyboard shortcuts</string>
+  <string name="keyboardShortcutsSectionGlobal">Global</string>
+  <string name="keyboardShortcutsSectionReader">Reader</string>
+  <string name="keyboardShortcutsRefresh">Refresh feeds</string>
+  <string name="keyboardShortcutsSearch">Search</string>
+  <string name="keyboardShortcutsSettings">Settings</string>
+  <string name="keyboardShortcutsAddFeed">Add feed</string>
+  <string name="keyboardShortcutsShowShortcuts">Show this dialog</string>
+  <string name="keyboardShortcutsNextPost">Next article</string>
+  <string name="keyboardShortcutsPreviousPost">Previous article</string>
+  <string name="keyboardShortcutsToggleBookmark">Toggle bookmark</string>
+  <string name="keyboardShortcutsMarkAsUnread">Mark as unread</string>
+  <string name="keyboardShortcutsOpenInBrowser">Open in browser</string>
+  <string name="keyboardShortcutsClose">Close reader</string>
 </resources>

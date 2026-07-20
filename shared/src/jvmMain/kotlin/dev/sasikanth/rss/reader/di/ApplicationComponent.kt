@@ -13,6 +13,7 @@ package dev.sasikanth.rss.reader.di
 import dev.sasikanth.rss.reader.app.AppInfo
 import dev.sasikanth.rss.reader.app.AppPlatform
 import dev.sasikanth.rss.reader.app.isFoss
+import dev.sasikanth.rss.reader.app.isGoogleDriveSupported
 import dev.sasikanth.rss.reader.billing.BillingHandler
 import dev.sasikanth.rss.reader.core.base.widget.di.WidgetPlatformComponent
 import dev.sasikanth.rss.reader.data.repository.RssRepository
@@ -20,10 +21,13 @@ import dev.sasikanth.rss.reader.data.repository.SettingsRepository
 import dev.sasikanth.rss.reader.data.sync.SyncCoordinator
 import dev.sasikanth.rss.reader.data.sync.utils.NewArticleNotifier
 import dev.sasikanth.rss.reader.di.scopes.AppScope
+import dev.sasikanth.rss.reader.initializers.Initializer
 import dev.sasikanth.rss.reader.reader.readability.HtmlReadabilityRunner
 import dev.sasikanth.rss.reader.reader.redability.ReadabilityRunner
+import dev.sasikanth.rss.reader.refresh.FeedsRefreshInitializer
 import java.io.File
 import me.tatarka.inject.annotations.Component
+import me.tatarka.inject.annotations.IntoSet
 import me.tatarka.inject.annotations.Provides
 
 @AppScope
@@ -40,6 +44,11 @@ abstract class ApplicationComponent : SharedApplicationComponent(), WidgetPlatfo
 
   abstract val billingHandler: BillingHandler
 
+  @IntoSet
+  @Provides
+  @AppScope
+  fun providesFeedsRefreshInitializer(bind: FeedsRefreshInitializer): Initializer = bind
+
   @Provides
   @AppScope
   fun providesReadabilityRunner(readabilityRunner: HtmlReadabilityRunner): ReadabilityRunner =
@@ -53,6 +62,7 @@ abstract class ApplicationComponent : SharedApplicationComponent(), WidgetPlatfo
       versionName = "1.0.0",
       isDebugBuild = false,
       isFoss = isFoss,
+      isGoogleDriveSupported = isGoogleDriveSupported,
       cachePath = {
         val cachePath = File(System.getProperty("user.home"), ".twine/cache")
         if (!cachePath.exists()) {

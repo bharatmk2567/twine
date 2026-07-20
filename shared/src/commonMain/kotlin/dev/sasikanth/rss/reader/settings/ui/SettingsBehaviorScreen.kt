@@ -22,7 +22,6 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.ButtonDefaults
@@ -50,6 +49,8 @@ import dev.sasikanth.rss.reader.components.SimpleTopAppBar
 import dev.sasikanth.rss.reader.components.SubHeader
 import dev.sasikanth.rss.reader.data.repository.BrowserType
 import dev.sasikanth.rss.reader.data.repository.MarkAsReadOn
+import dev.sasikanth.rss.reader.resources.icons.Platform
+import dev.sasikanth.rss.reader.resources.icons.platform
 import dev.sasikanth.rss.reader.settings.SettingsEvent
 import dev.sasikanth.rss.reader.settings.SettingsState
 import dev.sasikanth.rss.reader.settings.SettingsViewModel
@@ -60,6 +61,7 @@ import dev.sasikanth.rss.reader.settings.ui.items.OpmlFeedSelectionSheet
 import dev.sasikanth.rss.reader.settings.ui.items.PostsDeletionPeriodSettingItem
 import dev.sasikanth.rss.reader.ui.AppTheme
 import dev.sasikanth.rss.reader.utils.iosBottomSafeAreaPadding
+import dev.sasikanth.rss.reader.utils.restrictContentWidth
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -67,6 +69,8 @@ import org.jetbrains.compose.resources.stringResource
 import twine.shared.generated.resources.Res
 import twine.shared.generated.resources.settingsBrowserTypeSubtitle
 import twine.shared.generated.resources.settingsBrowserTypeTitle
+import twine.shared.generated.resources.settingsConfirmMarkAllAsReadSubtitle
+import twine.shared.generated.resources.settingsConfirmMarkAllAsReadTitle
 import twine.shared.generated.resources.settingsFeaturesAndBehaviors
 import twine.shared.generated.resources.settingsFreeFeedLimitReached
 import twine.shared.generated.resources.settingsHeaderBehaviour
@@ -170,12 +174,12 @@ private fun SettingsBehaviorContent(
       }
 
       LazyColumn(
-        modifier = Modifier.fillMaxSize().iosBottomSafeAreaPadding(),
+        modifier = Modifier.restrictContentWidth().iosBottomSafeAreaPadding(),
         contentPadding =
           PaddingValues(
-            start = padding.calculateStartPadding(layoutDirection) + settingsItemHorizontalPadding,
+            start = padding.calculateStartPadding(layoutDirection),
             top = padding.calculateTopPadding() + 8.dp,
-            end = padding.calculateEndPadding(layoutDirection) + settingsItemHorizontalPadding,
+            end = padding.calculateEndPadding(layoutDirection),
             bottom = padding.calculateBottomPadding() + 80.dp,
           ),
       ) {
@@ -190,24 +194,37 @@ private fun SettingsBehaviorContent(
           )
         }
 
-        item {
-          SettingsSwitchItem(
-            title = stringResource(Res.string.settingsBrowserTypeTitle),
-            subtitle = stringResource(Res.string.settingsBrowserTypeSubtitle),
-            checked = state.browserType == BrowserType.InApp,
-            onValueChanged = { useInAppBrowser ->
-              val newBrowserType =
-                if (useInAppBrowser) {
-                  BrowserType.InApp
-                } else {
-                  BrowserType.Default
-                }
-              dispatch(SettingsEvent.UpdateBrowserType(newBrowserType))
-            },
-          )
+        if (platform !is Platform.Desktop) {
+          item {
+            SettingsSwitchItem(
+              title = stringResource(Res.string.settingsBrowserTypeTitle),
+              subtitle = stringResource(Res.string.settingsBrowserTypeSubtitle),
+              checked = state.browserType == BrowserType.InApp,
+              onValueChanged = { useInAppBrowser ->
+                val newBrowserType =
+                  if (useInAppBrowser) {
+                    BrowserType.InApp
+                  } else {
+                    BrowserType.Default
+                  }
+                dispatch(SettingsEvent.UpdateBrowserType(newBrowserType))
+              },
+            )
+          }
         }
 
         item { SubHeader(text = stringResource(Res.string.settingsHeaderBehaviour)) }
+
+        item {
+          SettingsSwitchItem(
+            title = stringResource(Res.string.settingsConfirmMarkAllAsReadTitle),
+            subtitle = stringResource(Res.string.settingsConfirmMarkAllAsReadSubtitle),
+            checked = state.confirmMarkAllAsRead,
+            onValueChanged = { newValue ->
+              dispatch(SettingsEvent.ToggleConfirmMarkAllAsRead(newValue))
+            },
+          )
+        }
 
         item {
           MarkAsReadOnSettingItem(articleMarkAsReadOn = state.markAsReadOn) {
@@ -260,6 +277,7 @@ private fun SettingsBehaviorPreview() {
               versionName = "1.0.0",
               isDebugBuild = true,
               isFoss = false,
+              isGoogleDriveSupported = true,
               cachePath = { "" },
               platform = AppPlatform.Android,
             )

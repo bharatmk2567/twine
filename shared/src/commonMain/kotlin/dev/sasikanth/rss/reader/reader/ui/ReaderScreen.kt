@@ -22,6 +22,7 @@ import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.animateBounds
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -57,6 +58,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
@@ -64,6 +66,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.dropShadow
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -78,7 +82,7 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.LookaheadScope
-import androidx.compose.ui.layout.onVisibilityChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.UriHandler
@@ -138,7 +142,9 @@ import dev.sasikanth.rss.reader.utils.LocalWindowSizeClass
 import dev.sasikanth.rss.reader.utils.iosBottomSafeAreaPadding
 import dev.snipme.highlights.Highlights
 import dev.snipme.highlights.model.SyntaxThemes
+import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.launch
 import org.intellij.markdown.MarkdownTokenTypes
 import org.jetbrains.compose.resources.stringResource
@@ -190,6 +196,11 @@ internal fun ReaderScreen(
   val pagerState = rememberPagerState(initialPage = state.activePostIndex) { posts.itemCount }
   val exitScreen by viewModel.exitScreen.collectAsStateWithLifecycle(false)
 
+  val readerFocusRequester = remember { FocusRequester() }
+  if (platform is Platform.Desktop) {
+    LaunchedEffect(Unit) { readerFocusRequester.requestFocus() }
+  }
+
   // If the pager lays out before paging delivers its first item count, the initial
   // page gets clamped to 0 and the requested index is lost. Restore it exactly once,
   // as soon as the count is available, unless the user has already started swiping.
@@ -206,6 +217,23 @@ internal fun ReaderScreen(
       }
       initialPageRestored = true
     }
+  }
+
+  // Publish the active post from the settled page rather than per-page visibility:
+  // onVisibilityChanged ignores parent clipping, so in a split layout the pager's
+  // beyond-viewport neighbor overlaps the list pane and falsely reports as visible.
+  // The debounce keeps the initial page-restore scroll from publishing page 0.
+  LaunchedEffect(pagerState, posts) {
+    snapshotFlow { pagerState.settledPage to posts.itemCount }
+      .debounce(250.milliseconds)
+      .collect { (page, itemCount) ->
+        if (page in 0 until itemCount) {
+          val readerPost = runCatching { posts.peek(page) }.getOrNull()
+          if (readerPost != null) {
+            viewModel.dispatch(ReaderEvent.PostPageChanged(page, readerPost))
+          }
+        }
+      }
   }
 
   // In a split layout the list pane keeps the app theme, so article-based dynamic colors
@@ -335,21 +363,59 @@ internal fun ReaderScreen(
 
       Scaffold(
         modifier =
-          modifier.fillMaxSize().then(nestedScrollModifier).onKeyEvent { event ->
-            return@onKeyEvent when (event.key) {
-              Key.DirectionRight if event.type == KeyEventType.KeyUp -> {
-                coroutineScope.launch { pagerState.animateScrollToPage(pagerState.currentPage + 1) }
+          modifier
+            .fillMaxSize()
+            .then(nestedScrollModifier)
+            .focusRequester(readerFocusRequester)
+            .focusable()
+            .onKeyEvent { event ->
+              if (event.type != KeyEventType.KeyUp) return@onKeyEvent false
 
-                true
-              }
-              Key.DirectionLeft if event.type == KeyEventType.KeyUp -> {
-                coroutineScope.launch { pagerState.animateScrollToPage(pagerState.currentPage - 1) }
+              val currentReaderPost = runCatching { posts.peek(pagerState.settledPage) }.getOrNull()
 
-                true
+              return@onKeyEvent when (event.key) {
+                Key.DirectionRight -> {
+                  coroutineScope.launch {
+                    pagerState.animateScrollToPage(pagerState.currentPage + 1)
+                  }
+
+                  true
+                }
+                Key.DirectionLeft -> {
+                  coroutineScope.launch {
+                    pagerState.animateScrollToPage(pagerState.currentPage - 1)
+                  }
+
+                  true
+                }
+                Key.B if currentReaderPost != null -> {
+                  viewModel.dispatch(
+                    ReaderEvent.TogglePostBookmark(
+                      postId = currentReaderPost.id,
+                      currentBookmarkStatus = currentReaderPost.bookmarked,
+                    )
+                  )
+
+                  true
+                }
+                Key.U if currentReaderPost != null -> {
+                  viewModel.dispatch(ReaderEvent.OnMarkAsUnread(postId = currentReaderPost.id))
+
+                  true
+                }
+                Key.V if currentReaderPost != null -> {
+                  coroutineScope.launch { linkHandler.openLink(currentReaderPost.link) }
+
+                  true
+                }
+                Key.Escape -> {
+                  onBack()
+
+                  true
+                }
+                else -> false
               }
-              else -> false
-            }
-          },
+            },
         topBar = {
           val scrollBehavior =
             if (platform !is Platform.Desktop) {
@@ -490,6 +556,7 @@ internal fun ReaderScreen(
             }
 
           val backdropColor = AppTheme.colorScheme.backdrop
+          val scrimHeightPx = with(LocalDensity.current) { 96.dp.toPx() }
           HorizontalPager(
             modifier =
               Modifier.widthIn(max = readerContentMaxWidth)
@@ -498,10 +565,20 @@ internal fun ReaderScreen(
                 .drawWithContent {
                   drawContent()
                   drawRect(
-                    brush = Brush.verticalGradient(0f to backdropColor, 0.15f to Color.Transparent)
+                    brush =
+                      Brush.verticalGradient(
+                        colors = listOf(backdropColor, Color.Transparent),
+                        startY = 0f,
+                        endY = scrimHeightPx,
+                      )
                   )
                   drawRect(
-                    brush = Brush.verticalGradient(0.85f to Color.Transparent, 1f to backdropColor)
+                    brush =
+                      Brush.verticalGradient(
+                        colors = listOf(Color.Transparent, backdropColor),
+                        startY = size.height - scrimHeightPx,
+                        endY = size.height,
+                      )
                   )
                 },
             state = pagerState,
@@ -630,12 +707,7 @@ internal fun ReaderScreen(
                   )
                 }
               ReaderPage(
-                modifier =
-                  Modifier.fillMaxSize().onVisibilityChanged(minDurationMs = 250L) {
-                    if (it) {
-                      viewModel.dispatch(ReaderEvent.PostPageChanged(page, readerPost))
-                    }
-                  },
+                modifier = Modifier.fillMaxSize(),
                 contentPaddingValues = paddingValues,
                 pageViewModel = pageViewModel,
                 readerPost = readerPost,

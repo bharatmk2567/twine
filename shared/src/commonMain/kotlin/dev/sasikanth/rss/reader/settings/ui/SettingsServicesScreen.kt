@@ -19,12 +19,15 @@ package dev.sasikanth.rss.reader.settings.ui
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -56,6 +59,7 @@ import dev.sasikanth.rss.reader.settings.ui.items.OPMLSettingItem
 import dev.sasikanth.rss.reader.settings.ui.items.OpmlFeedSelectionSheet
 import dev.sasikanth.rss.reader.ui.AppTheme
 import dev.sasikanth.rss.reader.utils.iosBottomSafeAreaPadding
+import dev.sasikanth.rss.reader.utils.restrictContentWidth
 import org.jetbrains.compose.resources.stringResource
 import twine.shared.generated.resources.Res
 import twine.shared.generated.resources.buttonCancel
@@ -71,14 +75,14 @@ import twine.shared.generated.resources.settingsEnableNotificationsSubtitle
 import twine.shared.generated.resources.settingsEnableNotificationsTitle
 import twine.shared.generated.resources.settingsGroupByFeedNotificationsSubtitle
 import twine.shared.generated.resources.settingsGroupByFeedNotificationsTitle
+import twine.shared.generated.resources.settingsHeaderCloudStorage
 import twine.shared.generated.resources.settingsHeaderData
-import twine.shared.generated.resources.settingsHeaderSync
+import twine.shared.generated.resources.settingsHeaderFeedServices
 import twine.shared.generated.resources.settingsServicesAndSync
 import twine.shared.generated.resources.settingsSyncDropbox
 import twine.shared.generated.resources.settingsSyncFreshRSS
 import twine.shared.generated.resources.settingsSyncGoogleDrive
 import twine.shared.generated.resources.settingsSyncMiniflux
-import twine.shared.generated.resources.settingsSyncNextcloud
 import twine.shared.generated.resources.settingsSyncStatusFailure
 import twine.shared.generated.resources.switchServiceDescription
 import twine.shared.generated.resources.switchServiceTitle
@@ -90,7 +94,6 @@ internal fun SettingsServicesScreen(
   openPaywall: () -> Unit,
   openFreshRssLogin: () -> Unit,
   openMinifluxLogin: () -> Unit,
-  openNextcloudLogin: () -> Unit,
   modifier: Modifier = Modifier,
 ) {
   val state by viewModel.state.collectAsStateWithLifecycle()
@@ -122,7 +125,6 @@ internal fun SettingsServicesScreen(
     openPaywall = openPaywall,
     openFreshRssLogin = openFreshRssLogin,
     openMinifluxLogin = openMinifluxLogin,
-    openNextcloudLogin = openNextcloudLogin,
     modifier = modifier,
   )
 }
@@ -136,7 +138,6 @@ private fun SettingsServicesContent(
   openPaywall: () -> Unit,
   openFreshRssLogin: () -> Unit,
   openMinifluxLogin: () -> Unit,
-  openNextcloudLogin: () -> Unit,
   modifier: Modifier = Modifier,
 ) {
   val layoutDirection = LocalLayoutDirection.current
@@ -166,13 +167,11 @@ private fun SettingsServicesContent(
         dismissText = stringResource(Res.string.buttonCancel),
         onConfirm = {
           showSwitchServiceDialog = null
-          dispatch(SettingsEvent.SignOutClicked)
 
           if (toProvider is APIServiceProvider) {
             when (toProvider.cloudService) {
               ServiceType.FRESH_RSS -> openFreshRssLogin()
               ServiceType.MINIFLUX -> openMinifluxLogin()
-              ServiceType.NEXTCLOUD -> openNextcloudLogin()
               else -> {
                 // Unknown service type
               }
@@ -206,61 +205,82 @@ private fun SettingsServicesContent(
       }
 
       LazyColumn(
-        modifier = Modifier.fillMaxSize().iosBottomSafeAreaPadding(),
+        modifier = Modifier.restrictContentWidth().iosBottomSafeAreaPadding(),
         contentPadding =
           PaddingValues(
-            start = padding.calculateStartPadding(layoutDirection) + settingsItemHorizontalPadding,
+            start = padding.calculateStartPadding(layoutDirection),
             top = padding.calculateTopPadding() + 8.dp,
-            end = padding.calculateEndPadding(layoutDirection) + settingsItemHorizontalPadding,
+            end = padding.calculateEndPadding(layoutDirection),
             bottom = padding.calculateBottomPadding() + 80.dp,
           ),
       ) {
-        item { SubHeader(text = stringResource(Res.string.settingsHeaderSync)) }
+        val cloudStorageProviders = availableProviders.filter { it !is APIServiceProvider }
+        val feedServiceProviders = availableProviders.filterIsInstance<APIServiceProvider>()
 
-        item {
-          CloudSyncSettingItem(
-            syncProgress = state.syncProgress,
-            lastSyncedAt = state.lastSyncedAt,
-            availableProviders = availableProviders,
-            isSubscribed = state.isSubscribed,
-            onSyncClicked = { provider ->
-              if (provider.isPremium && !state.isSubscribed) {
-                openPaywall()
-              } else {
-                if (
-                  state.hasCloudServiceSignedIn && state.signedInService != provider.cloudService
-                ) {
-                  showSwitchServiceDialog = provider
-                } else {
-                  dispatch(SettingsEvent.SyncClicked(provider))
+        val onSyncClicked: (CloudServiceProvider) -> Unit = { provider ->
+          if (provider.isPremium && !state.isSubscribed) {
+            openPaywall()
+          } else {
+            if (state.hasCloudServiceSignedIn && state.signedInService != provider.cloudService) {
+              showSwitchServiceDialog = provider
+            } else {
+              dispatch(SettingsEvent.SyncClicked(provider))
+            }
+          }
+        }
+
+        val onAPIServiceClicked: (APIServiceProvider) -> Unit = { provider ->
+          if (provider.isPremium && !state.isSubscribed) {
+            openPaywall()
+          } else {
+            if (state.hasCloudServiceSignedIn && state.signedInService != provider.cloudService) {
+              showSwitchServiceDialog = provider
+            } else {
+              when (provider.cloudService) {
+                ServiceType.FRESH_RSS -> openFreshRssLogin()
+                ServiceType.MINIFLUX -> openMinifluxLogin()
+                else -> {
+                  throw IllegalStateException(
+                    "Unknown cloud service type: ${provider.cloudService}"
+                  )
                 }
               }
-            },
-            onAPIServiceClicked = { provider ->
-              if (provider.isPremium && !state.isSubscribed) {
-                openPaywall()
-              } else {
-                if (
-                  state.hasCloudServiceSignedIn && state.signedInService != provider.cloudService
-                ) {
-                  showSwitchServiceDialog = provider
-                } else {
-                  when (provider.cloudService) {
-                    ServiceType.FRESH_RSS -> openFreshRssLogin()
-                    ServiceType.MINIFLUX -> openMinifluxLogin()
-                    ServiceType.NEXTCLOUD -> openNextcloudLogin()
-                    else -> {
-                      throw IllegalStateException(
-                        "Unknown cloud service type: ${provider.cloudService}"
-                      )
-                    }
-                  }
-                }
-              }
-            },
-            onSignOutClicked = { dispatch(SettingsEvent.SignOutClicked) },
-            onSyncErrorClicked = { showSyncErrorDialog = it },
-          )
+            }
+          }
+        }
+
+        if (cloudStorageProviders.isNotEmpty()) {
+          item { ServiceGroupHeader(title = stringResource(Res.string.settingsHeaderCloudStorage)) }
+
+          item {
+            CloudSyncSettingItem(
+              syncProgress = state.syncProgress,
+              lastSyncedAt = state.lastSyncedAt,
+              availableProviders = cloudStorageProviders,
+              isSubscribed = state.isSubscribed,
+              onSyncClicked = onSyncClicked,
+              onAPIServiceClicked = onAPIServiceClicked,
+              onSignOutClicked = { dispatch(SettingsEvent.SignOutClicked) },
+              onSyncErrorClicked = { showSyncErrorDialog = it },
+            )
+          }
+        }
+
+        if (feedServiceProviders.isNotEmpty()) {
+          item { ServiceGroupHeader(title = stringResource(Res.string.settingsHeaderFeedServices)) }
+
+          item {
+            CloudSyncSettingItem(
+              syncProgress = state.syncProgress,
+              lastSyncedAt = state.lastSyncedAt,
+              availableProviders = feedServiceProviders,
+              isSubscribed = state.isSubscribed,
+              onSyncClicked = onSyncClicked,
+              onAPIServiceClicked = onAPIServiceClicked,
+              onSignOutClicked = { dispatch(SettingsEvent.SignOutClicked) },
+              onSyncErrorClicked = { showSyncErrorDialog = it },
+            )
+          }
         }
 
         item { SettingsDivider(24.dp) }
@@ -285,7 +305,7 @@ private fun SettingsServicesContent(
           )
         }
 
-        if (state.appInfo.platform != AppPlatform.iOS) {
+        if (state.appInfo.platform == AppPlatform.Android) {
           item {
             SettingsSwitchItem(
               title = stringResource(Res.string.settingsEnableNotificationsTitle),
@@ -340,13 +360,23 @@ private fun SettingsServicesContent(
 }
 
 @Composable
+private fun ServiceGroupHeader(title: String, modifier: Modifier = Modifier) {
+  Column(modifier = modifier.padding(horizontal = 24.dp).padding(top = 24.dp, bottom = 12.dp)) {
+    Text(
+      text = title,
+      style = MaterialTheme.typography.titleSmall,
+      color = AppTheme.colorScheme.onSurfaceVariant,
+    )
+  }
+}
+
+@Composable
 private fun serviceName(serviceType: ServiceType?): String {
   return when (serviceType) {
     ServiceType.DROPBOX -> stringResource(Res.string.settingsSyncDropbox)
     ServiceType.FRESH_RSS -> stringResource(Res.string.settingsSyncFreshRSS)
     ServiceType.MINIFLUX -> stringResource(Res.string.settingsSyncMiniflux)
     ServiceType.GOOGLE_DRIVE -> stringResource(Res.string.settingsSyncGoogleDrive)
-    ServiceType.NEXTCLOUD -> stringResource(Res.string.settingsSyncNextcloud)
     null -> ""
   }
 }
@@ -364,6 +394,7 @@ private fun SettingsServicesPreview() {
               versionName = "1.0.0",
               isDebugBuild = true,
               isFoss = false,
+              isGoogleDriveSupported = true,
               cachePath = { "" },
               platform = AppPlatform.Android,
             )
@@ -374,7 +405,6 @@ private fun SettingsServicesPreview() {
       openPaywall = {},
       openFreshRssLogin = {},
       openMinifluxLogin = {},
-      openNextcloudLogin = {},
     )
   }
 }

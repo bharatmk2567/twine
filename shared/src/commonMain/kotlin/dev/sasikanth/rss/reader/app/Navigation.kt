@@ -737,7 +737,7 @@ fun EntryProviderScope<NavKey>.feedInfoDialog(
   feedViewModel: (SavedStateHandle) -> FeedViewModel,
   navigator: AppNavigator,
 ) {
-  entry<Modals.FeedInfo> { modalRoute ->
+  entry<Modals.FeedInfo>(metadata = BottomSheetSceneStrategy.bottomSheet()) { modalRoute ->
     val savedStateHandle = SavedStateHandle(mapOf("feedId" to modalRoute.feedId))
     val viewModel = viewModel { feedViewModel(savedStateHandle) }
     FeedInfoBottomSheet(feedViewModel = viewModel, dismiss = { navigator.goBack() })
@@ -762,7 +762,7 @@ fun EntryProviderScope<NavKey>.groupSelectionDialog(
   groupSelectionViewModel: (SavedStateHandle) -> GroupSelectionViewModel,
   navigator: AppNavigator,
 ) {
-  entry<Modals.GroupSelection> { modalRoute ->
+  entry<Modals.GroupSelection>(metadata = BottomSheetSceneStrategy.bottomSheet()) { modalRoute ->
     val savedStateHandle =
       SavedStateHandle(mapOf("selectedGroupIds" to modalRoute.selectedGroupIds))
     val viewModel = viewModel { groupSelectionViewModel(savedStateHandle) }

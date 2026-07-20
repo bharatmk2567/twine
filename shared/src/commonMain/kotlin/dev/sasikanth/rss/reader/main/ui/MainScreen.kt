@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
@@ -32,11 +33,21 @@ import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.isMetaPressed
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.dp
 import androidx.navigation3.runtime.NavKey
@@ -52,6 +63,8 @@ import dev.sasikanth.rss.reader.app.AppNavigator
 import dev.sasikanth.rss.reader.app.Screen
 import dev.sasikanth.rss.reader.feeds.FeedsEvent
 import dev.sasikanth.rss.reader.feeds.FeedsViewModel
+import dev.sasikanth.rss.reader.resources.icons.Platform
+import dev.sasikanth.rss.reader.resources.icons.platform
 import dev.sasikanth.rss.reader.ui.AppTheme
 import dev.sasikanth.rss.reader.utils.LocalRootWindowSizeClass
 import kotlinx.coroutines.launch
@@ -59,6 +72,7 @@ import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
 import kotlinx.serialization.modules.subclassesOfSealed
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 internal fun MainScreen(
   feedsViewModel: FeedsViewModel,
@@ -79,9 +93,12 @@ internal fun MainScreen(
   canHandleBack: Boolean = true,
   startTab: String? = null,
 ) {
-  // Navigation (rail/drawer) tiers follow the window, not the pane, so in a list-detail
-  // split the side navigation stays inline in a row instead of overlaying the posts list.
+  // Inline side navigation (rail/expanded drawer) is reserved for large widths; on
+  // expanded widths (foldables) the navigation is a modal drawer overlaying the
+  // list-detail split, keeping the content panes stable when it opens.
   val sizeClass = LocalRootWindowSizeClass.current
+  val hasInlineNavigation =
+    sizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_LARGE_LOWER_BOUND)
   val drawerState = rememberDrawerState(DrawerValue.Closed)
   val scope = rememberCoroutineScope()
 
@@ -118,20 +135,11 @@ internal fun MainScreen(
   NavigationEventHandler(
     state = rememberNavigationEventState(NavigationEventInfo.None),
     isBackEnabled =
-      canHandleBack &&
-        (selectedDestination != MainDestination.Home ||
-          (sizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_EXPANDED_LOWER_BOUND) &&
-            isSideNavigationExpanded &&
-            !sizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_LARGE_LOWER_BOUND)) ||
-          (drawerState.isOpen)),
+      canHandleBack && (selectedDestination != MainDestination.Home || drawerState.isOpen),
   ) {
     when {
       drawerState.isOpen -> {
         scope.launch { drawerState.close() }
-      }
-      isSideNavigationExpanded &&
-        !sizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_LARGE_LOWER_BOUND) -> {
-        setSideNavigationExpanded(false)
       }
       else -> {
         navigator.popUpTo(Screen.MainHome::class, inclusive = false)
@@ -164,7 +172,7 @@ internal fun MainScreen(
   val openDrawer = {
     focusManager.clearFocus()
     when {
-      sizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_EXPANDED_LOWER_BOUND) -> {
+      hasInlineNavigation -> {
         setSideNavigationExpanded(!isSideNavigationExpanded)
       }
       else -> {
@@ -180,12 +188,80 @@ internal fun MainScreen(
     }
   }
 
+  val navigateToDestination = { destination: MainDestination ->
+    if (selectedDestination != destination) {
+      navigator.popUpTo(Screen.MainHome::class, inclusive = false)
+      val route =
+        when (destination) {
+          MainDestination.Home -> null
+          MainDestination.Search -> Screen.MainSearch
+          MainDestination.Bookmarks -> Screen.MainBookmarks
+          MainDestination.Settings -> Screen.MainSettings
+          MainDestination.Discovery -> Screen.MainDiscovery
+        }
+      if (route != null) {
+        navigator.navigate(route)
+      }
+    }
+    Unit
+  }
+
+  var showKeyboardShortcuts by remember { mutableStateOf(false) }
+
+  val mainFocusRequester = remember { FocusRequester() }
+  if (platform == Platform.Desktop) {
+    LaunchedEffect(selectedDestination) { mainFocusRequester.requestFocus() }
+  }
+
+  // Global shortcuts fire on key-down (while Cmd is still held, since some platforms
+  // release the modifier key before the letter key) and are armed/disarmed per-key so
+  // holding a key doesn't repeatedly trigger navigation.
+  var armedShortcutKey by remember { mutableStateOf<Key?>(null) }
+
+  val keyboardShortcutsModifier =
+    if (platform == Platform.Desktop) {
+      Modifier.focusRequester(mainFocusRequester).focusable().onPreviewKeyEvent { event ->
+        if (event.type == KeyEventType.KeyUp) {
+          armedShortcutKey = null
+          return@onPreviewKeyEvent false
+        }
+        if (event.type != KeyEventType.KeyDown || !event.isMetaPressed) {
+          return@onPreviewKeyEvent false
+        }
+        if (armedShortcutKey == event.key) return@onPreviewKeyEvent true
+
+        when (event.key) {
+          Key.F -> {
+            armedShortcutKey = event.key
+            navigateToDestination(MainDestination.Search)
+            true
+          }
+          Key.Comma -> {
+            armedShortcutKey = event.key
+            navigateToDestination(MainDestination.Settings)
+            true
+          }
+          Key.N -> {
+            armedShortcutKey = event.key
+            openAddFeedScreen()
+            true
+          }
+          Key.Slash -> {
+            armedShortcutKey = event.key
+            showKeyboardShortcuts = true
+            true
+          }
+          else -> false
+        }
+      }
+    } else {
+      Modifier
+    }
+
   val drawerContent =
     @Composable { isExpanded: Boolean ->
-      val showCloseIcon =
-        !sizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_EXPANDED_LOWER_BOUND)
-      val dismissOnSelection =
-        !sizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_LARGE_LOWER_BOUND)
+      val showCloseIcon = !hasInlineNavigation
+      val dismissOnSelection = !hasInlineNavigation
 
       NavigationDrawerContent(
         feedsViewModel = feedsViewModel,
@@ -223,7 +299,7 @@ internal fun MainScreen(
         openFeedHealth = openFeedHealth,
         closeDrawer = {
           when {
-            sizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_EXPANDED_LOWER_BOUND) -> {
+            hasInlineNavigation -> {
               setSideNavigationExpanded(false)
             }
             else -> {
@@ -238,8 +314,8 @@ internal fun MainScreen(
     }
 
   when {
-    sizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_EXPANDED_LOWER_BOUND) -> {
-      Row(modifier = modifier.fillMaxSize()) {
+    hasInlineNavigation -> {
+      Row(modifier = modifier.fillMaxSize().then(keyboardShortcutsModifier)) {
         val sideNavigationWidth by animateDpAsState(if (isSideNavigationExpanded) 360.dp else 80.dp)
 
         Box(modifier = Modifier.requiredWidth(sideNavigationWidth)) {
@@ -260,11 +336,12 @@ internal fun MainScreen(
     }
     else -> {
       ModalNavigationDrawer(
-        modifier = modifier,
+        modifier = modifier.then(keyboardShortcutsModifier),
         drawerState = drawerState,
         drawerContent = {
           ModalDrawerSheet(
-            modifier = Modifier.fillMaxWidth(),
+            // Full-width on phones; partial overlay (Gmail-style) on foldables/expanded.
+            modifier = Modifier.fillMaxWidth().widthIn(max = 400.dp),
             drawerContainerColor = AppTheme.colorScheme.backdrop,
             drawerContentColor = AppTheme.colorScheme.onSurface,
             drawerShape = RectangleShape,
@@ -285,6 +362,10 @@ internal fun MainScreen(
         )
       }
     }
+  }
+
+  if (showKeyboardShortcuts) {
+    KeyboardShortcutsSheet(onDismiss = { showKeyboardShortcuts = false })
   }
 }
 

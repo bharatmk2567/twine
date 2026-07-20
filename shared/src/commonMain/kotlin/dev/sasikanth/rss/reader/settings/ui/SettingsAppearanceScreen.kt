@@ -27,13 +27,13 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredHeight
@@ -45,6 +45,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -60,6 +61,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.window.core.layout.WindowSizeClass
 import dev.sasikanth.rss.reader.app.AppInfo
 import dev.sasikanth.rss.reader.app.AppPlatform
 import dev.sasikanth.rss.reader.components.DropdownMenu
@@ -88,7 +90,9 @@ import dev.sasikanth.rss.reader.settings.ui.items.AppIconSettingItem
 import dev.sasikanth.rss.reader.settings.ui.items.ThemeVariantSettingItem
 import dev.sasikanth.rss.reader.ui.AppTheme
 import dev.sasikanth.rss.reader.utils.LocalShowFeedFavIconSetting
+import dev.sasikanth.rss.reader.utils.LocalWindowSizeClass
 import dev.sasikanth.rss.reader.utils.iosBottomSafeAreaPadding
+import dev.sasikanth.rss.reader.utils.restrictContentWidth
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
@@ -118,9 +122,12 @@ import twine.shared.generated.resources.themeVariantAmber
 import twine.shared.generated.resources.themeVariantCoral
 import twine.shared.generated.resources.themeVariantDynamic
 import twine.shared.generated.resources.themeVariantForest
+import twine.shared.generated.resources.themeVariantLavender
 import twine.shared.generated.resources.themeVariantParchment
 import twine.shared.generated.resources.themeVariantRaspberry
+import twine.shared.generated.resources.themeVariantSepia
 import twine.shared.generated.resources.themeVariantSkyline
+import twine.shared.generated.resources.themeVariantSlate
 import twine.shared.generated.resources.themeVariantSolarized
 import twine.shared.generated.resources.themeVariantSystemDynamic
 
@@ -186,12 +193,12 @@ private fun SettingsAppearanceContent(
       }
 
       LazyColumn(
-        modifier = Modifier.fillMaxSize().iosBottomSafeAreaPadding(),
+        modifier = Modifier.restrictContentWidth().iosBottomSafeAreaPadding(),
         contentPadding =
           PaddingValues(
-            start = padding.calculateStartPadding(layoutDirection) + settingsItemHorizontalPadding,
+            start = padding.calculateStartPadding(layoutDirection),
             top = padding.calculateTopPadding() + 8.dp,
-            end = padding.calculateEndPadding(layoutDirection) + settingsItemHorizontalPadding,
+            end = padding.calculateEndPadding(layoutDirection),
             bottom = padding.calculateBottomPadding() + 80.dp,
           ),
       ) {
@@ -287,12 +294,14 @@ private fun SettingsAppearanceContent(
           )
         }
 
-        item {
-          AppIconSettingItem(
-            appIcon = state.appIcon,
-            isSubscribed = state.isSubscribed,
-            onClick = { dispatch(SettingsEvent.AppIconClicked) },
-          )
+        if (platform !is Platform.Desktop) {
+          item {
+            AppIconSettingItem(
+              appIcon = state.appIcon,
+              isSubscribed = state.isSubscribed,
+              onClick = { dispatch(SettingsEvent.AppIconClicked) },
+            )
+          }
         }
       }
     },
@@ -423,36 +432,44 @@ private fun LayoutPreview(homeViewMode: HomeViewMode) {
         )
         .padding(vertical = 8.dp)
   ) {
-    AnimatedContent(homeViewMode) {
-      when (it) {
-        HomeViewMode.Default -> {
-          PostListItem(
-            item = mockPost,
-            onClick = {},
-            onPostBookmarkClick = {},
-            onPostCommentsClick = {},
-            onPostSourceClick = {},
-            updatePostReadStatus = {},
-          )
+    BoxWithConstraints {
+      val previewSizeClass =
+        remember(maxWidth, maxHeight) {
+          WindowSizeClass(widthDp = maxWidth.value, heightDp = maxHeight.value)
         }
-        HomeViewMode.Simple -> {
-          SimplePostListItem(
-            item = mockPost,
-            onClick = {},
-            onPostBookmarkClick = {},
-            onPostCommentsClick = {},
-            onPostSourceClick = {},
-            updatePostReadStatus = {},
-          )
-        }
-        HomeViewMode.Compact -> {
-          CompactPostListItem(
-            item = mockPost,
-            onClick = {},
-            onPostBookmarkClick = {},
-            onPostCommentsClick = {},
-            updatePostReadStatus = {},
-          )
+      CompositionLocalProvider(LocalWindowSizeClass provides previewSizeClass) {
+        AnimatedContent(homeViewMode) {
+          when (it) {
+            HomeViewMode.Default -> {
+              PostListItem(
+                item = mockPost,
+                onClick = {},
+                onPostBookmarkClick = {},
+                onPostCommentsClick = {},
+                onPostSourceClick = {},
+                updatePostReadStatus = {},
+              )
+            }
+            HomeViewMode.Simple -> {
+              SimplePostListItem(
+                item = mockPost,
+                onClick = {},
+                onPostBookmarkClick = {},
+                onPostCommentsClick = {},
+                onPostSourceClick = {},
+                updatePostReadStatus = {},
+              )
+            }
+            HomeViewMode.Compact -> {
+              CompactPostListItem(
+                item = mockPost,
+                onClick = {},
+                onPostBookmarkClick = {},
+                onPostCommentsClick = {},
+                updatePostReadStatus = {},
+              )
+            }
+          }
         }
       }
     }
@@ -483,6 +500,9 @@ private fun ThemeVariant.displayName(): String {
     ThemeVariant.Raspberry -> stringResource(Res.string.themeVariantRaspberry)
     ThemeVariant.Skyline -> stringResource(Res.string.themeVariantSkyline)
     ThemeVariant.Parchment -> stringResource(Res.string.themeVariantParchment)
+    ThemeVariant.Sepia -> stringResource(Res.string.themeVariantSepia)
+    ThemeVariant.Slate -> stringResource(Res.string.themeVariantSlate)
+    ThemeVariant.Lavender -> stringResource(Res.string.themeVariantLavender)
   }
 }
 
@@ -508,6 +528,7 @@ private fun SettingsAppearancePreview() {
               versionName = "1.0.0",
               isDebugBuild = true,
               isFoss = false,
+              isGoogleDriveSupported = true,
               cachePath = { "" },
               platform = AppPlatform.Android,
             )

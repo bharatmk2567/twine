@@ -55,6 +55,7 @@ class SettingsRepository(
   private val enableAutoSyncKey = booleanPreferencesKey("enable_auto_sync")
   private val showFeedFavIconKey = booleanPreferencesKey("show_feed_fav_icon")
   private val markPostsAsReadOnKey = stringPreferencesKey("mark_posts_as_read_on")
+  private val confirmMarkAllAsReadKey = booleanPreferencesKey("confirm_mark_all_as_read")
   private val audioMarkAsReadThresholdKey = stringPreferencesKey("audio_mark_as_read_threshold")
   private val homeViewModeKey = stringPreferencesKey("home_view_mode")
   private val readerFontScaleFactorKey = floatPreferencesKey("reader_font_scale")
@@ -75,7 +76,6 @@ class SettingsRepository(
   private val showPinnedSourcesKey = booleanPreferencesKey("show_pinned_sources")
   private val showFeaturedSectionKey = booleanPreferencesKey("show_featured_section")
   private val lastSeenChangelogVersionKey = stringPreferencesKey("last_seen_changelog_version")
-  private val lastWidgetPreviewUpdateTimeKey = longPreferencesKey("last_widget_preview_update_time")
 
   val browserType: Flow<BrowserType> =
     dataStore.data.map { preferences ->
@@ -131,6 +131,9 @@ class SettingsRepository(
 
   val markAsReadOn: Flow<MarkAsReadOn> =
     dataStore.data.map { preferences -> mapToMarkAsReadOnType(preferences[markPostsAsReadOnKey]) }
+
+  val confirmMarkAllAsRead: Flow<Boolean> =
+    dataStore.data.map { preferences -> preferences[confirmMarkAllAsReadKey] ?: true }
 
   val audioMarkAsReadThreshold: Flow<AudioMarkAsReadThreshold> =
     dataStore.data.map { preferences ->
@@ -190,11 +193,6 @@ class SettingsRepository(
 
   val lastSeenChangelogVersion: Flow<String?> =
     dataStore.data.map { preferences -> preferences[lastSeenChangelogVersionKey] }
-
-  val lastWidgetPreviewUpdateTime: Flow<Instant?> =
-    dataStore.data.map { preferences ->
-      preferences[lastWidgetPreviewUpdateTimeKey]?.let(Instant::fromEpochMilliseconds)
-    }
 
   suspend fun enableAutoSyncImmediate(): Boolean {
     return enableAutoSync.first()
@@ -271,6 +269,10 @@ class SettingsRepository(
     dataStore.edit { preferences -> preferences[markPostsAsReadOnKey] = value.name }
   }
 
+  suspend fun toggleConfirmMarkAllAsRead(value: Boolean) {
+    dataStore.edit { preferences -> preferences[confirmMarkAllAsReadKey] = value }
+  }
+
   suspend fun updateAudioMarkAsReadThreshold(value: AudioMarkAsReadThreshold) {
     dataStore.edit { preferences -> preferences[audioMarkAsReadThresholdKey] = value.name }
   }
@@ -337,12 +339,6 @@ class SettingsRepository(
 
   suspend fun updateLastSeenChangelogVersion(versionName: String) {
     dataStore.edit { preferences -> preferences[lastSeenChangelogVersionKey] = versionName }
-  }
-
-  suspend fun updateLastWidgetPreviewUpdateTime(value: Instant) {
-    dataStore.edit { preferences ->
-      preferences[lastWidgetPreviewUpdateTimeKey] = value.toEpochMilliseconds()
-    }
   }
 
   suspend fun clear() {
